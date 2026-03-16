@@ -618,9 +618,9 @@ class Validator:
                 # Sync metagraph
                 await self._sync_metagraph()
 
-                # Discover connections/orchestrators
-                await self._update_connections()
+                # Discover orchestrators from BeamCore first, then filter connections
                 await self._discover_orchestrators()
+                await self._update_connections()
 
                 # Sync orchestrators from metagraph
                 await self._sync_orchestrators()
@@ -1379,7 +1379,12 @@ class Validator:
             logger.warning(f"Failed to sync metagraph: {e}")
 
     async def _update_connections(self) -> None:
-        """Update list of valid connections (miners)"""
+        """Update list of valid connections (miners).
+
+        Only tracks orchestrators that are registered with BeamCore.
+        This prevents generating tasks for metagraph miners that haven't
+        registered with the network.
+        """
         if self.settings.local_mode:
             # In local mode, keep the local orchestrator connection
             logger.debug("Keeping local mode connections")
@@ -1389,13 +1394,23 @@ class Validator:
             logger.debug("Skipping connection update - no metagraph")
             return
 
+        # Get set of registered orchestrator hotkeys from BeamCore
+        registered_hotkeys = set(self.orchestrators.keys())
+
         self.connections.clear()
+        skipped_unregistered = 0
 
         for uid in range(len(self.metagraph.hotkeys)):
             stake = float(self.metagraph.S[uid])
 
             if stake >= self.settings.min_connection_stake:
                 hotkey = self.metagraph.hotkeys[uid]
+
+                # Only track orchestrators registered with BeamCore
+                if hotkey not in registered_hotkeys:
+                    skipped_unregistered += 1
+                    continue
+
                 axon = self.metagraph.axons[uid]
 
                 self.connections[uid] = {
@@ -1407,7 +1422,10 @@ class Validator:
                     "last_seen": datetime.utcnow(),
                 }
 
-        logger.debug(f"Found {len(self.connections)} valid connections")
+        logger.info(
+            f"Updated connections: {len(self.connections)} registered, "
+            f"{skipped_unregistered} skipped (not registered with BeamCore)"
+        )
 
     # =========================================================================
     # Orchestrator Discovery and Queries
