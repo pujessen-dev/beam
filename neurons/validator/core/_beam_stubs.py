@@ -254,8 +254,8 @@ class SLAScorer:
 class SLARewardCalculator:
     """SLA reward calculator (stub - calculations done by BeamCore)."""
 
-    def __init__(self, **kwargs):
-        pass
+    def __init__(self, sla_scorer=None, **kwargs):
+        self.sla_scorer = sla_scorer
 
     def calculate_rewards(self, scores: Dict[int, float], total_emission: int) -> Dict[int, int]:
         return {}
