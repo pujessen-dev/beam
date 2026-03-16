@@ -309,8 +309,15 @@ class WorkerRegistry:
 class ReassignmentManager:
     """Task reassignment manager (stub)."""
 
-    def __init__(self, **kwargs):
-        pass
+    def __init__(self, worker_registry=None, **kwargs):
+        self.worker_registry = worker_registry
+        self.pending_reassignments: List[Any] = []
+
+    def check_and_queue_sla_reassignments(self) -> List[Any]:
+        return []
+
+    def process_pending_reassignments(self) -> List[Any]:
+        return []
 
     async def reassign_task(self, task_id: str, new_worker_id: str) -> bool:
         return True
