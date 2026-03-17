@@ -66,13 +66,16 @@ class SLALevel(IntEnum):
 @dataclass
 class Task:
     """Bandwidth task."""
-    task_id: str
-    chunk_hash: str
-    chunk_size: int
+    task_id: bytes = b""
+    validator_hotkey: str = ""
+    chunk_hash: bytes = b""
+    chunk_size: int = 0
+    deadline: int = 0
     sla_level: SLALevel = SLALevel.BEST_EFFORT
-    deadline_us: int = 0
-    canary: str = ""
+    canary: bytes = b""
     canary_offset: int = 0
+    path: List[str] = field(default_factory=list)
+    created_at: int = 0
 
 
 # ============================================================================
@@ -142,6 +145,8 @@ class BandwidthChallenge:
     deadline_us: int = 0
     canary: str = ""
     canary_offset: int = 0
+    path: List[str] = field(default_factory=list)
+    expected_hops: int = 1
     sla_level: int = 0
     accepted: bool = False
 
@@ -217,6 +222,51 @@ class SLAMetrics:
     sample_count: int = 0
     measurement_start: Optional[datetime] = None
     measurement_end: Optional[datetime] = None
+
+    @classmethod
+    def from_latency_samples(
+        cls,
+        latency_samples: Optional[List[float]] = None,
+        uptime_percent: float = 100.0,
+        bandwidth_mbps: float = 0.0,
+        acceptance_rate_percent: float = 100.0,
+        success_rate_percent: float = 100.0,
+        measurement_start: Optional[datetime] = None,
+        measurement_end: Optional[datetime] = None,
+    ) -> "SLAMetrics":
+        """Create SLAMetrics from latency samples.
+
+        Args:
+            latency_samples: List of latency measurements in milliseconds
+            uptime_percent: Uptime percentage (0-100)
+            bandwidth_mbps: Measured bandwidth in Mbps
+            acceptance_rate_percent: Task acceptance rate (0-100)
+            success_rate_percent: Task success rate (0-100)
+            measurement_start: Start of measurement window
+            measurement_end: End of measurement window
+
+        Returns:
+            SLAMetrics instance with computed values
+        """
+        samples = latency_samples or []
+        avg_latency = sum(samples) / len(samples) if samples else 0.0
+        # P95 approximation: use 95th percentile if enough samples, else use avg
+        p95_latency = (
+            sorted(samples)[int(len(samples) * 0.95)] if len(samples) >= 20 else avg_latency
+        )
+        return cls(
+            uptime=uptime_percent / 100.0,
+            uptime_percent=uptime_percent,
+            success_rate=success_rate_percent / 100.0,
+            success_rate_percent=success_rate_percent,
+            acceptance_rate_percent=acceptance_rate_percent,
+            avg_latency_ms=avg_latency,
+            latency_p95_ms=p95_latency,
+            bandwidth_mbps=bandwidth_mbps,
+            sample_count=len(samples),
+            measurement_start=measurement_start,
+            measurement_end=measurement_end,
+        )
 
 
 @dataclass
