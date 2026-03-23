@@ -603,6 +603,7 @@ class Validator:
                     status=status,
                     last_epoch_scored=getattr(self, 'current_epoch', None),
                     health_info=health_info,
+                    external_url=self.settings.external_url,
                 )
 
             except asyncio.CancelledError:

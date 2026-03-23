@@ -125,6 +125,8 @@ async def lifespan(app: FastAPI):
     asyncio.create_task(validator.start())
 
     logger.info("BEAM Validator node started")
+    if settings.external_url:
+        logger.info(f"External URL: {settings.external_url}")
 
     yield
 
@@ -150,16 +152,18 @@ app = FastAPI(
 @app.get("/health")
 async def health():
     """Health check endpoint"""
+    settings = get_settings()
     if validator and validator.health_monitor:
         report = await validator.health_monitor.run_health_checks()
         return {
             "status": report.status.value,
             "node_type": "validator",
+            "external_url": settings.external_url,
             "checks": [c.to_dict() for c in report.checks],
             "consecutive_failures": report.consecutive_failures,
             "uptime_seconds": report.uptime_seconds,
         }
-    return {"status": "healthy", "node_type": "validator"}
+    return {"status": "healthy", "node_type": "validator", "external_url": settings.external_url}
 
 
 @app.get("/health/detailed")

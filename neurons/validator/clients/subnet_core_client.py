@@ -1491,6 +1491,7 @@ class SubnetCoreClient:
         status: str = "online",
         last_epoch_scored: Optional[int] = None,
         health_info: Optional[dict] = None,
+        external_url: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         Submit a heartbeat to indicate the validator is online.
@@ -1502,6 +1503,7 @@ class SubnetCoreClient:
             status: Current status (online, degraded)
             last_epoch_scored: Last epoch this validator scored
             health_info: Optional health details
+            external_url: Public-facing URL if behind proxy
 
         Returns:
             Response dict with status
@@ -1515,6 +1517,7 @@ class SubnetCoreClient:
             "timestamp": int(time.time() * 1e6),  # microseconds
             "last_epoch_scored": last_epoch_scored,
             "health_info": health_info,
+            "external_url": external_url,
         }
 
         try:

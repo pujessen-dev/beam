@@ -51,6 +51,7 @@ class Settings(BaseSettings):
     # ==========================================================================
 
     external_ip: Optional[str] = None
+    external_url: Optional[str] = None  # e.g., https://validator.yourplatform.com/
     port: int = 8093
 
     # ==========================================================================
