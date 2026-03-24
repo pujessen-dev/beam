@@ -554,22 +554,21 @@ However, if you want local persistence for analytics, caching, or custom trackin
 
 ### Supported Databases
 
-| Provider                       | Connection String                                        |
-| ------------------------------ | -------------------------------------------------------- |
-| **Neon** (Serverless Postgres) | `postgresql+asyncpg://user:pass@host/db?sslmode=require` |
-| **Supabase**                   | `postgresql+asyncpg://user:pass@host:5432/postgres`      |
-| **Local Postgres**             | `postgresql+asyncpg://localhost/validator`               |
+| Provider           | Connection String                                          |
+| ------------------ | ---------------------------------------------------------- |
+| **Local Postgres** | `postgresql+asyncpg://localhost/validator`                 |
+| **Remote Postgres**| `postgresql+asyncpg://user:pass@host:5432/db?sslmode=require` |
 
 ### Configuration
 
 Set the `DATABASE_URL` environment variable:
 
 ```bash
-# Neon (recommended for serverless)
-export DATABASE_URL=postgresql+asyncpg://user:password@localhost:5432/beam
-
 # Local Postgres
 export DATABASE_URL="postgresql+asyncpg://localhost/validator"
+
+# Remote Postgres (with SSL)
+export DATABASE_URL="postgresql+asyncpg://user:password@host:5432/db?sslmode=require"
 ```
 
 ### Use Cases

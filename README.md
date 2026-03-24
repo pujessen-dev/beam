@@ -45,72 +45,15 @@ BEAM supports flexible source-to-destination configurations:
 | **Multi → Single**  | Multiple sources aggregated to one destination           |
 | **Multi → Multi**   | Multiple sources to multiple destinations (mesh)         |
 
-```bash
-# Single to single
-beam transfer gcs://src/data.bin s3://dst/data.bin
-
-# Single to multi (fan-out)
-beam transfer gcs://src/data.bin \
-  -d s3://dst-1/data.bin \
-  -d r2://dst-2/data.bin
-
-# Multi to single (aggregation)
-beam transfer gcs://src-1/part1.bin gcs://src-2/part2.bin \
-  -d s3://dst/combined.bin
-
-# Multi to multi (mesh)
-beam transfer gcs://src-1/data.bin gcs://src-2/data.bin \
-  -d s3://dst-1/data.bin \
-  -d r2://dst-2/data.bin
-```
-
 Each transfer is chunked and distributed across workers in parallel.
 
 ## Capabilities
 
-### Universal Storage Connectivity
-
-Connect any storage provider to any destination — S3, GCS, Azure Blob, R2, IPFS, HTTP endpoints, and more.
-
-```bash
-beam transfer gcs://source-bucket/data.bin s3://dest-bucket/data.bin
-```
-
-### Multi-Destination Fan-Out
-
-Replicate data to multiple destinations in a single transfer.
-
-```bash
-beam transfer s3://source/model.tar \
-  -d gcs://replica-us/model.tar \
-  -d azure://replica-eu/model.tar \
-  -d r2://replica-asia/model.tar
-```
-
-### Parallel Transfers
-
-Large files are split into chunks and transferred in parallel across the network, maximizing throughput.
-
-### Webhook Callbacks
-
-Get notified when transfers complete.
-
-```bash
-beam transfer s3://source/file.bin gcs://dest/file.bin \
-  --callback https://your-service.com/webhook
-```
-
-### MCP Integration
-
-BEAM supports the [Model Context Protocol](https://modelcontextprotocol.io) (MCP), allowing AI agents to invoke BEAM as a tool for data movement.
-
-```json
-{
-  "tool": "beam_transfer",
-  "source": "gcs://dataset/training-data.tar",
-  "destinations": ["s3://gpu-cluster-1/data.tar", "r2://gpu-cluster-2/data.tar"]
-}
-```
+- **Universal Storage Connectivity** — S3, GCS, Azure Blob, R2, IPFS, HTTP endpoints
+- **Multi-Destination Fan-Out** — Replicate data to multiple destinations in a single transfer
+- **Parallel Transfers** — Large files split into chunks and transferred in parallel
+- **Webhook Callbacks** — Get notified when transfers complete
+- **MCP Integration** — AI agents can invoke BEAM as a tool for data movement
 
 ## Built for the Machine Internet
 
@@ -140,7 +83,7 @@ These workflows involve terabytes or petabytes moving across regions and indepen
                               └──────────────┘
 ```
 
-1. Clients create transfers via BeamCore API
+1. Clients create transfers via BeamCore API or SDK
 2. BeamCore assigns chunks to orchestrators by stake-weighted allocation
 3. Orchestrators poll BeamCore for assignments and create tasks
 4. BeamCore pushes tasks to workers via WebSocket
@@ -160,36 +103,22 @@ By coordinating distributed bandwidth and measuring performance through Proof-of
 - **Performance-based** — Rewards tied to measured delivery metrics
 - **Decentralized** — No single point of control
 
-## Get Started
+## Run a Node
 
-### Use BEAM (SDK)
+This repository contains the code for running orchestrators and validators on the BEAM network.
 
-```bash
-pip install beam-sdk
-```
+- [Orchestrator Guide](docs/orchestrator.md) — Run a miner node that coordinates bandwidth work
+- [Validator Guide](docs/validator.md) — Run a validator that verifies proofs and sets weights
 
-```python
-from beam_sdk import Beam
+### Network Information
 
-beam = Beam(api_key="...")
-transfer = await beam.transfers.create(
-    sources=[{"type": "gcs", "bucket": "src", "key": "data.bin", ...}],
-    destinations=[
-        {"type": "s3", "bucket": "dst-1", "key": "data.bin", ...},
-        {"type": "r2", "bucket": "dst-2", "key": "data.bin", ...},
-    ],
-)
-```
-
-### Run a Node
-
-- [Orchestrator Guide](docs/orchestrator.md)
-- [Validator Guide](docs/validator.md)
+| Network | Subnet UID | Subtensor | BeamCore URL |
+|---------|------------|-----------|--------------|
+| Testnet | 304 | `test` | https://beamcore-dev.b1m.ai |
+| Mainnet | 105 | `finney` | https://beamcore.b1m.ai |
 
 ## Links
 
-- [Documentation](docs/)
-- [Beam SDK](https://github.com/Beam-Network/beam-sdk)
 - [Bittensor](https://bittensor.com)
 
 ## License

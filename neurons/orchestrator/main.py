@@ -147,7 +147,7 @@ async def _heartbeat_loop(settings, hotkey: str, get_worker_count, get_balance_i
 
 
 # Configure logging - both console and file
-LOG_DIR = os.environ.get("LOG_DIR", "/tmp/terapipe_logs")
+LOG_DIR = os.environ.get("LOG_DIR", "/tmp/beam_logs")
 os.makedirs(LOG_DIR, exist_ok=True)
 
 log_format = "%(asctime)s | %(levelname)s | %(name)s | %(message)s"

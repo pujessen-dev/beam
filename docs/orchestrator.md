@@ -109,8 +109,8 @@ Orchestrators are responsible for:
 - **CPU**: Task scheduling, proof verification, and API handling
 - **RAM**: Worker state management, proof aggregation, metagraph sync
 - **Storage**: Proof storage, logs, database (if local)
-- **Network**: Must handle worker connections and data coordination
-- **Public IP**: Workers and validators need to reach your orchestrator
+- **Network**: Must handle API requests and BeamCore communication
+- **Public IP**: BeamCore needs to reach your orchestrator for health checks
 
 ---
 
@@ -122,17 +122,16 @@ Orchestrators are responsible for:
 |----------|---------|---------|
 | Python | 3.10+ | Runtime |
 | Bittensor | 8.0+ | Blockchain interaction |
-| PostgreSQL | 15+ | Data persistence (or use BeamCore API) |
-| Redis | 7+ | Caching and pub/sub |
 | Git | 2.0+ | Code deployment |
 
-### Optional (Recommended)
+### Optional
 
-| Software | Purpose |
-|----------|---------|
-| Prometheus + Grafana | Monitoring |
-| systemd | Process management |
-| nginx | Reverse proxy with SSL |
+| Software | Version | Purpose |
+|----------|---------|---------|
+| Redis | 7+ | Caching (recommended for production) |
+| Prometheus + Grafana | - | Monitoring |
+| systemd | - | Process management |
+| nginx | - | Reverse proxy with SSL |
 
 ### Operating System
 
@@ -278,7 +277,7 @@ Create `.env` in `neurons/orchestrator/`:
 # API SERVER
 # =============================================================================
 ORCHESTRATOR_HOST=0.0.0.0
-ORCHESTRATOR_PORT=8001
+API_PORT=8000
 LOG_LEVEL=INFO
 
 # =============================================================================
@@ -315,15 +314,15 @@ SUBNETCORE_TRUST_SECRET=your_secret_here
 # WORKER MANAGEMENT
 # =============================================================================
 MAX_WORKERS=10000
-WORKER_TIMEOUT_SECONDS=300
-WORKER_MIN_BANDWIDTH_MBPS=50.0
+WORKER_TIMEOUT=300
+MIN_WORKER_BANDWIDTH=10.0
 
 # =============================================================================
-# TRANSFER SETTINGS
+# TASK SETTINGS
 # =============================================================================
-DEFAULT_CHUNK_SIZE=10485760
-MAX_WORKERS_PER_TRANSFER=100
-MIN_WORKERS_PER_TRANSFER=3
+CHUNK_SIZE=1048576
+MAX_CONCURRENT_TASKS=1000
+TASK_TIMEOUT=120
 
 # =============================================================================
 # AUTHENTICATION
@@ -349,29 +348,29 @@ METAGRAPH_SYNC_INTERVAL=300
 # =============================================================================
 # OPERATOR FEE (Your profit margin)
 # =============================================================================
-# Percentage of emissions you keep (0-100, default 10)
+# Percentage of emissions you keep (0-100, default 0)
 # Rest goes to workers
-OPERATOR_FEE_PERCENT=10
+FEE_PERCENTAGE=0
 ```
 
 ### Configuration Reference
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `ORCHESTRATOR_PORT` | `8001` | API port |
-| `WALLET_NAME` | `default` | Bittensor wallet name |
+| `API_PORT` | `8000` | API port |
+| `WALLET_NAME` | `orchestrator` | Bittensor wallet name |
 | `NETUID` | `304` | Subnet UID |
 | `SUBNET_CORE_URL` | Required | BeamCore API endpoint |
 | `MAX_WORKERS` | `10000` | Max workers to accept |
-| `WORKER_TIMEOUT_SECONDS` | `300` | Worker heartbeat timeout |
-| `OPERATOR_FEE_PERCENT` | `10` | Your fee (0-100%) |
+| `WORKER_TIMEOUT` | `300` | Worker heartbeat timeout (seconds) |
+| `FEE_PERCENTAGE` | `0` | Your fee (0-100%) |
 | `METAGRAPH_SYNC_INTERVAL` | `300` | Metagraph sync interval (seconds) |
 
 ### Firewall Configuration
 
 ```bash
 # Orchestrator API
-sudo ufw allow 8001/tcp
+sudo ufw allow 8000/tcp
 
 # Redis (if external)
 sudo ufw allow 6379/tcp
@@ -397,7 +396,7 @@ python main.py
 
 1. **Health check:**
 ```bash
-curl http://localhost:8001/health
+curl http://localhost:8000/health
 ```
 
 Expected:
@@ -413,7 +412,7 @@ Expected:
 
 2. **Check state:**
 ```bash
-curl http://localhost:8001/state | jq
+curl http://localhost:8000/state | jq
 ```
 
 3. **View logs:**
@@ -432,7 +431,7 @@ INFO | Metagraph synced: 10 neurons
 INFO | Orchestrator UID: 5
 INFO | Stake: 500.0 TAO
 INFO | BeamCore connection: https://beamcore-dev.b1m.ai
-INFO | Starting API server on 0.0.0.0:8001
+INFO | Starting API server on 0.0.0.0:8000
 INFO | Ready to accept workers
 ```
 
@@ -480,11 +479,11 @@ curl -X PATCH https://beamcore-dev.b1m.ai/orchestrators/{your_hotkey}/fee \
 ### Monitoring Workers
 
 ```bash
-# List connected workers
-curl http://localhost:8001/workers | jq
-
 # Worker stats
-curl http://localhost:8001/state | jq '.worker_stats'
+curl http://localhost:8000/workers/stats | jq
+
+# Full orchestrator state
+curl http://localhost:8000/state | jq
 ```
 
 ---
@@ -498,7 +497,8 @@ curl http://localhost:8001/state | jq '.worker_stats'
 | `GET /health` | Basic health status |
 | `GET /state` | Full orchestrator state |
 | `GET /metrics` | Prometheus metrics |
-| `GET /workers` | Connected workers |
+| `GET /metrics/json` | JSON metrics |
+| `GET /workers/stats` | Worker statistics |
 
 ### Key Metrics to Monitor
 
@@ -602,7 +602,7 @@ WARNING | Payment failed: insufficient balance
 ### Debug Mode
 
 ```bash
-LOG_LEVEL=DEBUG python -m src.main
+LOG_LEVEL=DEBUG python main.py
 ```
 
 ---
