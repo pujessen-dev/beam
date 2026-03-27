@@ -677,7 +677,7 @@ class SubnetCoreClient:
             logger.debug(f"Unknown WebSocket message type: {msg_type}")
 
     async def _send_ws_heartbeat(self):
-        """Send heartbeat over WebSocket."""
+        """Send heartbeat over WebSocket with full stats."""
         if not self._ws or not self._ws_connected:
             return
 
@@ -691,6 +691,12 @@ class SubnetCoreClient:
         message = {
             "type": "heartbeat",
             "worker_count": stats.get("current_workers", 0),
+            "avg_bandwidth_mbps": stats.get("avg_bandwidth_mbps", 0.0),
+            "total_bytes_relayed": stats.get("total_bytes_relayed", 0),
+            "fee_percentage": stats.get("fee_percentage", 0.0),
+            "balance_tao": stats.get("balance_tao", -1.0),
+            "coldkey_balance_tao": stats.get("coldkey_balance_tao", -1.0),
+            "pending_payments": stats.get("pending_payments", 0),
         }
 
         try:
@@ -754,16 +760,14 @@ class SubnetCoreClient:
             return False
 
     async def _heartbeat_loop(self, interval: float):
-        """Send periodic heartbeats (HTTP + WebSocket)."""
+        """Send periodic heartbeats via WebSocket."""
         while self._running:
             try:
-                # Send HTTP heartbeat (for compatibility and stats reporting)
-                result = await self.send_heartbeat()
-                logger.debug(f"HTTP heartbeat sent: {result}")
-
-                # Also send WebSocket heartbeat if connected
                 if self._ws_connected:
                     await self._send_ws_heartbeat()
+                    logger.debug("WebSocket heartbeat sent")
+                else:
+                    logger.debug("Skipping heartbeat: WebSocket not connected")
             except Exception as e:
                 logger.warning(f"Heartbeat failed: {e}")
 
@@ -815,23 +819,20 @@ class SubnetCoreClient:
 
     async def send_heartbeat(self) -> Dict[str, Any]:
         """
-        Send heartbeat to SubnetCore.
+        Send heartbeat to SubnetCore via HTTP.
+
+        DEPRECATED: Use WebSocket heartbeat instead. This endpoint is deprecated
+        and will be removed after 2026-04-15. Heartbeats are now sent automatically
+        via WebSocket when connected.
 
         POST /orchestrators/heartbeat
-
-        Required fields:
-            - hotkey: str
-            - current_workers: int
-            - signature: str (signature of "hotkey:timestamp")
-
-        Optional fields:
-            - avg_bandwidth_mbps: float
-            - total_bytes_relayed: int
-            - fee_percentage: float
-            - balance_tao: float
-            - coldkey_balance_tao: float
-            - pending_payments: int
         """
+        import warnings
+        warnings.warn(
+            "send_heartbeat() is deprecated. Heartbeats are now sent via WebSocket.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         client = await self._get_client()
 
         timestamp = int(time.time())
