@@ -1822,10 +1822,14 @@ class Orchestrator:
         chunk_end: int,
     ) -> List[Dict[str, Any]]:
         """
-        Assign chunks to workers using round-robin.
+        Assign chunks to workers based on SLA metrics, spreading load evenly.
 
         Only assigns chunks in the range [chunk_start, chunk_end] (inclusive).
         This ensures each orchestrator only assigns its designated chunk range.
+
+        Workers are ranked by SLA score (trust_score * success_rate * bandwidth_factor).
+        Chunks are assigned round-robin across all workers, ensuring each worker gets
+        at most 1 chunk before any worker gets a second chunk.
 
         Returns list of assignments: [{"worker_id": "...", "chunk_indices": [17, 18, 19]}, ...]
         """
@@ -1835,13 +1839,37 @@ class Orchestrator:
         # Build chunk indices from this orchestrator's assigned range
         chunk_indices = list(range(chunk_start, chunk_end + 1))
 
-        # Round-robin assignment
-        worker_assignments = {w["worker_id"]: [] for w in workers}
-        worker_ids = list(worker_assignments.keys())
+        # Score workers by SLA metrics (higher is better)
+        def worker_sla_score(w: Dict[str, Any]) -> float:
+            trust = float(w.get("trust_score", 0.5))
+            success = float(w.get("success_rate", 0.5))
+            bandwidth = float(w.get("bandwidth_mbps", 100.0))
+            # Normalize bandwidth (100 Mbps = 1.0, cap at 2.0)
+            bandwidth_factor = min(2.0, bandwidth / 100.0)
+            return trust * success * bandwidth_factor
 
+        # Sort workers by SLA score (best first)
+        sorted_workers = sorted(workers, key=worker_sla_score, reverse=True)
+        worker_ids = [w["worker_id"] for w in sorted_workers]
+
+        # Initialize assignments for each worker
+        worker_assignments = {wid: [] for wid in worker_ids}
+
+        # Assign chunks round-robin across workers (spreads load evenly)
+        # Each worker gets 1 chunk before any gets 2
         for i, chunk_idx in enumerate(chunk_indices):
             worker_id = worker_ids[i % len(worker_ids)]
             worker_assignments[worker_id].append(chunk_idx)
+
+        # Log SLA-based assignment
+        if chunk_indices:
+            top_worker = sorted_workers[0] if sorted_workers else {}
+            logger.debug(
+                f"SLA-based assignment: {len(chunk_indices)} chunks to {len(worker_ids)} workers, "
+                f"top worker={top_worker.get('worker_id', '?')[:16]} "
+                f"(trust={top_worker.get('trust_score', 0):.2f}, "
+                f"success={top_worker.get('success_rate', 0):.2f})"
+            )
 
         # Convert to list format
         return [

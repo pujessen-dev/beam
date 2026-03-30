@@ -617,13 +617,24 @@ class SubnetCoreClient:
             logger.info(f"WebSocket connected to buffer: {data.get('buffer_id')}")
 
         elif msg_type == "transfer_assignment":
-            # New transfer to process
+            # New transfer to process (single assignment)
             logger.info(f"Received transfer assignment: {data.get('transfer_id')}")
             if self._transfer_handler:
                 try:
                     await self._transfer_handler(data)
                 except Exception as e:
                     logger.error(f"Error handling transfer: {e}")
+
+        elif msg_type == "transfer_assignments":
+            # Batch of transfer assignments (multiple src×dest combos)
+            assignments = data.get("assignments", [])
+            logger.info(f"Received {len(assignments)} batched transfer assignments")
+            if self._transfer_handler:
+                for assignment in assignments:
+                    try:
+                        await self._transfer_handler(assignment)
+                    except Exception as e:
+                        logger.error(f"Error handling batched transfer: {e}")
 
         elif msg_type == "task_result":
             # Task completion notification
