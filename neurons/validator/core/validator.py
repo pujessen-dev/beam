@@ -3126,6 +3126,27 @@ class Validator:
                 f"Falling back to legacy weight formula."
             )
 
+        # Filter summaries by current metagraph ownership to avoid stale UID mappings
+        filtered_summaries = []
+        skipped_count = 0
+        for s in raw_summaries:
+            uid = s["orchestrator_uid"]
+            hotkey = s["orchestrator_hotkey"]
+            # Check if this hotkey currently owns this UID in the metagraph
+            if self.metagraph and 0 <= uid < len(self.metagraph.hotkeys):
+                current_owner = self.metagraph.hotkeys[uid]
+                if current_owner != hotkey:
+                    skipped_count += 1
+                    logger.debug(
+                        f"Skipping stale summary: UID {uid} claimed by {hotkey[:16]}... "
+                        f"but currently owned by {current_owner[:16]}..."
+                    )
+                    continue
+            filtered_summaries.append(s)
+
+        if skipped_count > 0:
+            logger.info(f"Filtered {skipped_count} stale summaries (UID ownership changed)")
+
         summaries = [
             SummaryInput(
                 orchestrator_hotkey=s["orchestrator_hotkey"],
@@ -3137,7 +3158,7 @@ class Validator:
                 verification_rate=s.get("verification_rate", 0.0),
                 spot_check_rate=s.get("spot_check_rate", 0.0),
             )
-            for s in raw_summaries
+            for s in filtered_summaries
         ]
 
         # 2. Fetch breakdowns (secondary — for penalties + params_hash verification)
