@@ -692,7 +692,7 @@ def get_ws_url(worker_id: str, api_key: str, api_url: str) -> str:
         ws_base = "ws://" + base[7:]
     else:
         ws_base = "ws://" + base
-    url = f"{ws_base}/workers/ws/{worker_id}"
+    url = f"{ws_base}/ws/{worker_id}"
     if api_key:
         url = f"{url}?api_key={api_key}"
     return url
