@@ -1121,8 +1121,14 @@ class Orchestrator:
                 if self.metagraph and self.subtensor:
                     self.metagraph.sync(subtensor=self.subtensor)
 
-                if self.our_uid is None:
-                    self._find_our_uid()
+                # Always re-check UID after sync — hotkey may have moved to a
+                # different UID slot after re-registration (stale UID causes
+                # PoB proofs to be filtered by BeamCore).
+                old_uid = self.our_uid
+                self._find_our_uid()
+                if self.our_uid != old_uid and self.subnet_core_client is not None:
+                    logger.info(f"UID changed {old_uid} → {self.our_uid}, updating SubnetCoreClient")
+                    self.subnet_core_client.orchestrator_uid = self.our_uid
 
                 self.distribute_rewards_to_workers()
                 # Note: Validator discovery removed - BeamCore handles PoB centrally
