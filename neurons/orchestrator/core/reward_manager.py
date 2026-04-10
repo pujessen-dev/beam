@@ -205,7 +205,7 @@ class RewardManager:
                 spendable = max(0.0, available - fee_buffer)
 
                 if reward > spendable:
-                    if spendable <= min_reward:
+                    if spendable <= MIN_CHAIN_TRANSFER:
                         worker_hk = proof.worker_hotkey if proof else (worker.hotkey if worker else "unknown")
                         logger.warning(
                             f"Insufficient balance ({available:.4f} TAO) to pay worker "
